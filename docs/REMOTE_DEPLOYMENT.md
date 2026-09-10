@@ -17,6 +17,22 @@ absent from the catalog. This deployment is for extraction and analysis. A
 future importer should be a separate, narrowly scoped service with explicit
 write approval.
 
+## Import unsupported-bank transactions
+
+Use the local VPS command after reviewing a CSV. The required columns are
+`date`, `amount`, `merchant_name`, and `category_id`; `notes` is optional.
+The first run is a preview and returns a confirmation token. No transaction is
+created until the same file is run again with `--apply --confirm <token>`:
+
+```bash
+monarch-mcp-import-transactions bank.csv --account-id <monarch-account-id>
+monarch-mcp-import-transactions bank.csv --account-id <monarch-account-id> \
+  --apply --confirm <preview-token>
+```
+
+The importer is intentionally not an MCP tool. It retains an explicit
+operator review step and does not enlarge Claude.ai's access.
+
 ## One-time Monarch session setup
 
 On the VPS, create a 0600 cookie file at

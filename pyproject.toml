@@ -45,6 +45,7 @@ Issues = "https://github.com/robcerda/monarch-mcp-server/issues"
 
 [project.scripts]
 monarch-mcp-server = "monarch_mcp_server.server:main"
+monarch-mcp-import-transactions = "monarch_mcp_server.transaction_import:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
