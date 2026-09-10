@@ -25,8 +25,9 @@ The first run is a preview and returns a confirmation token. No transaction is
 created until the same file is run again with `--apply --confirm <token>`:
 
 ```bash
-monarch-mcp-import-transactions bank.csv --account-id <monarch-account-id>
-monarch-mcp-import-transactions bank.csv --account-id <monarch-account-id> \
+cd /opt/monarch-mcp-server
+.venv/bin/monarch-mcp-import-transactions bank.csv --account-id <monarch-account-id>
+.venv/bin/monarch-mcp-import-transactions bank.csv --account-id <monarch-account-id> \
   --apply --confirm <preview-token>
 ```
 
