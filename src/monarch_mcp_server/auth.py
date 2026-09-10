@@ -39,16 +39,42 @@ def _elicit_supported(ctx: Context) -> bool:
     return hasattr(ctx, "elicit")
 
 
-class LoginForm(BaseModel):
+class ElicitationForm(BaseModel):
+    """Pydantic form whose schema works with strict MCP clients.
+
+    Codex's MCP client accepts the MCP schema subset but rejects Pydantic's
+    presentation-only ``title`` metadata. Keep validation in Pydantic while
+    stripping that metadata from the wire schema recursively.
+    """
+
+    @classmethod
+    def model_json_schema(cls, *args, **kwargs):
+        schema = super().model_json_schema(*args, **kwargs)
+
+        def remove_titles(value):
+            if isinstance(value, dict):
+                return {
+                    key: remove_titles(item)
+                    for key, item in value.items()
+                    if key != "title"
+                }
+            if isinstance(value, list):
+                return [remove_titles(item) for item in value]
+            return value
+
+        return remove_titles(schema)
+
+
+class LoginForm(ElicitationForm):
     email: str = Field(description="Monarch Money email address")
     password: str = Field(description="Monarch Money password")
 
 
-class MFAForm(BaseModel):
+class MFAForm(ElicitationForm):
     mfa_code: str = Field(description="Monarch Money MFA code")
 
 
-class TokenForm(BaseModel):
+class TokenForm(ElicitationForm):
     token: str = Field(
         description=(
             "Monarch Money session token. Grab it from browser DevTools → "

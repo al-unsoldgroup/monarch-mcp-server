@@ -32,6 +32,20 @@ def cancel():
     return SimpleNamespace(action="cancel", data=None)
 
 
+@pytest.mark.parametrize("form", [auth.LoginForm, auth.MFAForm, auth.TokenForm])
+def test_elicitation_schemas_omit_pydantic_titles(form):
+    """Codex accepts only the strict MCP schema subset for elicitation."""
+
+    def contains_title(value):
+        if isinstance(value, dict):
+            return "title" in value or any(contains_title(item) for item in value.values())
+        if isinstance(value, list):
+            return any(contains_title(item) for item in value)
+        return False
+
+    assert not contains_title(form.model_json_schema())
+
+
 @pytest.fixture(autouse=True)
 def no_session_save():
     """Prevent real keyring writes during auth tests."""
