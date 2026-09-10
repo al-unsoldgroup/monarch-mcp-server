@@ -17,6 +17,11 @@ absent from the catalog. This deployment is for extraction and analysis. A
 future importer should be a separate, narrowly scoped service with explicit
 write approval.
 
+The deployment also enables the two secure MCP elicitation forms,
+`monarch_login` and `monarch_login_with_token`, for one-time session setup.
+They collect credentials directly in the MCP client UI and do not expose them
+to the model. All financial mutation tools remain absent.
+
 ## Import unsupported-bank transactions
 
 Use the local VPS command after reviewing a CSV. The required columns are

@@ -18,8 +18,17 @@ from typing import Any, Callable, FrozenSet, TypeVar
 logger = logging.getLogger(__name__)
 
 ENV_VAR = "MONARCH_MCP_READ_ONLY"
+INTERACTIVE_LOGIN_ENV_VAR = "MONARCH_MCP_ALLOW_INTERACTIVE_LOGIN"
 
 _TRUTHY = frozenset({"1", "true", "t", "yes", "y", "on"})
+
+# These tools use MCP elicitation: credentials travel directly between the
+# client UI and server, never through a model argument. They are still state
+# changes, so read-only deployments hide them by default. A deployment can
+# opt in during its one-time session setup without exposing financial writes.
+INTERACTIVE_LOGIN_TOOLS: FrozenSet[str] = frozenset(
+    {"monarch_login", "monarch_login_with_token"}
+)
 
 # Every registered tool that writes. Listed explicitly rather than matched by
 # name prefix: this is a security control, and a tool silently failing to be
@@ -76,6 +85,11 @@ def is_read_only() -> bool:
     return os.environ.get(ENV_VAR, "").strip().lower() in _TRUTHY
 
 
+def interactive_login_allowed() -> bool:
+    """Whether the secure MCP login forms are intentionally exposed."""
+    return os.environ.get(INTERACTIVE_LOGIN_ENV_VAR, "").strip().lower() in _TRUTHY
+
+
 def install(mcp: Any) -> None:
     """Make ``mcp.tool()`` skip mutating tools while read only is enabled.
 
@@ -98,7 +112,9 @@ def install(mcp: Any) -> None:
             # fn.__name__ would let a renamed mutating tool through the gate.
             positional = args[0] if args and isinstance(args[0], str) else None
             name = positional or kwargs.get("name") or getattr(fn, "__name__", "")
-            if name in MUTATING_TOOLS:
+            if name in MUTATING_TOOLS and not (
+                name in INTERACTIVE_LOGIN_TOOLS and interactive_login_allowed()
+            ):
                 logger.info("Read only mode: not registering %s", name)
                 return fn
             return register(fn)

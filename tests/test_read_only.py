@@ -26,6 +26,16 @@ class TestIsReadOnly:
         assert read_only.is_read_only() is False
 
 
+class TestInteractiveLogin:
+    def test_disabled_by_default(self, monkeypatch):
+        monkeypatch.delenv(read_only.INTERACTIVE_LOGIN_ENV_VAR, raising=False)
+        assert read_only.interactive_login_allowed() is False
+
+    def test_truthy_value_enables_login_forms(self, monkeypatch):
+        monkeypatch.setenv(read_only.INTERACTIVE_LOGIN_ENV_VAR, "true")
+        assert read_only.interactive_login_allowed() is True
+
+
 class TestRegistration:
     """Registration is skipped, not just guarded at call time.
 
@@ -82,6 +92,33 @@ class TestRegistration:
 
         fake.tool()(delete_transaction)
         assert registered == ["delete_transaction"]
+
+    def test_only_interactive_login_tools_bypass_read_only_gate(self, monkeypatch):
+        registered = []
+
+        class FakeMCP:
+            def tool(self, *args, **kwargs):
+                def decorator(fn):
+                    registered.append(fn.__name__)
+                    return fn
+
+                return decorator
+
+        monkeypatch.setenv(read_only.ENV_VAR, "1")
+        monkeypatch.setenv(read_only.INTERACTIVE_LOGIN_ENV_VAR, "1")
+        fake = FakeMCP()
+        read_only.install(fake)
+
+        def monarch_login():
+            pass
+
+        def create_transaction():
+            pass
+
+        fake.tool()(monarch_login)
+        fake.tool()(create_transaction)
+
+        assert registered == ["monarch_login"]
 
 
 class TestMutatingToolList:
