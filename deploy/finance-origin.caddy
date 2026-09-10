@@ -1,0 +1,10 @@
+# Cloudflare Tunnel terminates public TLS. Caddy receives only the tunnel's
+# loopback HTTP request and proxies it when the Worker origin credential matches.
+http://finance-origin.unsold.cloud {
+	@worker header X-Monarch-Origin-Token {env.MONARCH_ORIGIN_TOKEN}
+	handle @worker {
+		reverse_proxy 127.0.0.1:8788
+	}
+
+	respond 403
+}

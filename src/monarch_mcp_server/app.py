@@ -1,6 +1,7 @@
 """FastMCP application instance and entry point."""
 
 import logging
+import os
 
 try:  # mcp >= 2.0 renamed FastMCP to MCPServer
     from mcp.server.mcpserver import MCPServer as FastMCP
@@ -34,10 +35,33 @@ app = mcp
 
 
 def main() -> None:
-    """Main entry point for the server."""
+    """Start a local stdio server or the private Streamable HTTP origin.
+
+    ``stdio`` remains the default so existing Claude Desktop and Claude Code
+    configurations keep working.  Production sets ``MONARCH_MCP_TRANSPORT`` to
+    ``streamable-http`` and binds only to the VPS loopback interface; the
+    Cloudflare OAuth edge is the public endpoint.
+    """
     logger.info("Starting Monarch Money MCP Server...")
+    transport = os.getenv("MONARCH_MCP_TRANSPORT", "stdio")
+    if transport not in {"stdio", "streamable-http"}:
+        raise ValueError(
+            "MONARCH_MCP_TRANSPORT must be 'stdio' or 'streamable-http'"
+        )
+
+    if transport == "streamable-http":
+        try:
+            port = int(os.getenv("MONARCH_MCP_PORT", "8788"))
+        except ValueError as error:
+            raise ValueError("MONARCH_MCP_PORT must be an integer") from error
+        # MCP SDK 1.x reads HTTP listener configuration from ``settings``;
+        # passing these to ``run`` only works in newer SDK versions.
+        mcp.settings.host = os.getenv("MONARCH_MCP_HOST", "127.0.0.1")
+        mcp.settings.port = port
+        mcp.settings.streamable_http_path = "/mcp"
+
     try:
-        mcp.run()
+        mcp.run(transport=transport)
     except Exception as e:
         logger.error(f"Failed to run server: {str(e)}")
         raise

@@ -1,0 +1,21 @@
+[Unit]
+Description=Monarch Money MCP private Streamable HTTP origin
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/monarch-mcp-server
+Environment=MONARCH_MCP_TRANSPORT=streamable-http
+Environment=MONARCH_MCP_HOST=127.0.0.1
+Environment=MONARCH_MCP_PORT=8788
+Environment=MONARCH_MCP_READ_ONLY=1
+ExecStart=/opt/monarch-mcp-server/.venv/bin/monarch-mcp-server
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
