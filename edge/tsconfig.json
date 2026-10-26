@@ -14,7 +14,7 @@
 		/* Specify how TypeScript looks up a file from a given module specifier. */
 		"moduleResolution": "bundler",
 
-		"types": ["node", "vite/client"],
+		"types": ["node"],
 
 		/* Enable importing .json files */
 		"resolveJsonModule": true,
@@ -26,6 +26,8 @@
 
 		/* Disable emitting files from a compilation. */
 		"noEmit": true,
+		/* Tests run under Node's type stripping, which needs explicit .ts imports. */
+		"allowImportingTsExtensions": true,
 
 		/* Ensure that each file can be safely transpiled without relying on other imports. */
 		"isolatedModules": true,

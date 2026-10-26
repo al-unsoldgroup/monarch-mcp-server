@@ -61,3 +61,52 @@ In Claude.ai, add a custom connector using
 `https://finance.unsold.cloud/mcp`. Complete the Cloudflare Access sign-in and
 approve the connector. OAuth discovery and dynamic client registration are
 served by the Worker.
+
+## Register on the Cloudflare MCP server portals
+
+Both portals reach this server as an ordinary OAuth-protected upstream. In
+Cloudflare One, open Access controls, AI controls, MCP servers:
+
+1. Add an MCP server named `monarch` with URL
+   `https://finance.unsold.cloud/mcp`. Choose OAuth as the authentication
+   method and complete the Cloudflare Access sign-in as
+   `alexandre.stemarie@gmail.com`.
+2. Add a second MCP server named `monarch-chatgpt` with URL
+   `https://finance.unsold.cloud/mcp?surface=chatgpt`, authenticated the same
+   way.
+3. Attach `monarch` to the Claude portal and `monarch-chatgpt` to the ChatGPT
+   portal. Leave the tool allowlist at its default unless a policy says
+   otherwise.
+4. Sync the server's tools in the portal and confirm the catalog loads.
+
+The upstream sees the portal as its client, so `clientInfo` cannot tell
+ChatGPT from Claude. The `?surface=` query parameter does: it becomes
+`mcp_surface` on every analytics event. The Worker forwards it to the origin,
+which ignores it.
+
+## Tool-call analytics
+
+The Worker emits one PostHog `$mcp_tool_call` event per `tools/call` it
+proxies (`edge/src/telemetry.ts`). The event uses the same name and property
+names as the shared `@unsoldgroup/mcp-telemetry` package, so Monarch appears
+next to the TypeScript MCP servers in PostHog's MCP views:
+`$mcp_tool_name`, `$mcp_duration_ms`, `$mcp_is_error`, `mcp_surface`
+(`claude` unless the connector URL has a valid `?surface=`), `tool_tier`
+(`read`, `write` or `destructive`), `sensitive` and `mcp_server_name`
+(`monarch-mcp`). Tool arguments and results are never sent.
+
+The Worker does not use the shared package because it does not host an
+`McpServer`: it is a transparent proxy, and the MCP server is the Python
+FastMCP origin. The tap reads a copy of the request and response body, so
+the client stream is not delayed. `$mcp_duration_ms` is measured at the edge,
+so it includes the tunnel round trip.
+
+Analytics are off until the optional secret is set:
+
+```bash
+cd edge && npx wrangler secret put POSTHOG_PROJECT_TOKEN
+```
+
+`POSTHOG_HOST`, `ENVIRONMENT` and the optional `DEPLOY_GIT_SHA` are plain
+vars. `edge/src/telemetry.ts` holds the tier map for every tool in the README
+table, and `pnpm test` in `edge/` fails if a tool is added without a tier.

@@ -22,7 +22,11 @@
   },
   "vars": {
     "ALLOWED_EMAIL": "alexandre.stemarie@gmail.com",
-    "MONARCH_ORIGIN_URL": "https://finance-origin.unsold.cloud"
+    "MONARCH_ORIGIN_URL": "https://finance-origin.unsold.cloud",
+    // PostHog MCP analytics (src/telemetry.ts). Inert until the optional
+    // POSTHOG_PROJECT_TOKEN secret is set.
+    "POSTHOG_HOST": "https://us.i.posthog.com",
+    "ENVIRONMENT": "production"
   },
   "dev": {
     "port": 8788

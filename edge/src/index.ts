@@ -1,6 +1,6 @@
 import OAuthProvider from "@cloudflare/workers-oauth-provider";
 import { handleAccessRequest } from "./access-handler";
-import type { Props } from "./workers-oauth-utils";
+import { forwardWithToolCallTap } from "./telemetry";
 
 /**
  * OAuth-protected, transparent MCP proxy.
@@ -11,26 +11,30 @@ import type { Props } from "./workers-oauth-utils";
  * bearer token.  The credential is never sent to Claude or exposed to callers.
  */
 const originProxy = {
-	async fetch(request: Request, env: Env): Promise<Response> {
-		const origin = new URL(env.MONARCH_ORIGIN_URL);
-		const target = new URL(request.url);
-		origin.pathname = target.pathname;
-		origin.search = target.search;
-
-		const headers = new Headers(request.headers);
-		headers.set("X-Monarch-Origin-Token", env.MONARCH_ORIGIN_TOKEN);
-		headers.delete("host");
-
-		return fetch(origin, {
-			body: request.body,
-			headers,
-			method: request.method,
-			redirect: "manual",
-		});
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		return forwardWithToolCallTap(request, env, ctx, (forwarded) => proxyToOrigin(forwarded, env));
 	},
 };
 
-export default new OAuthProvider<Env, Props>({
+function proxyToOrigin(request: Request, env: Env): Promise<Response> {
+	const origin = new URL(env.MONARCH_ORIGIN_URL);
+	const target = new URL(request.url);
+	origin.pathname = target.pathname;
+	origin.search = target.search;
+
+	const headers = new Headers(request.headers);
+	headers.set("X-Monarch-Origin-Token", env.MONARCH_ORIGIN_TOKEN);
+	headers.delete("host");
+
+	return fetch(origin, {
+		body: request.body,
+		headers,
+		method: request.method,
+		redirect: "manual",
+	});
+}
+
+export default new OAuthProvider<Env>({
 	apiHandler: originProxy,
 	apiRoute: "/mcp",
 	authorizeEndpoint: "/authorize",
